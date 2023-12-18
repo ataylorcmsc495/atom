@@ -24,6 +24,14 @@ std::string printWindowPosition(sf::RenderWindow *window) {
     return "Window Postion: " + std::to_string(window->getPosition().x) + "x" + std::to_string(window->getPosition().y);
 }
 
+std::string printMousePosition() {
+    return "Mouse Position (Abs): " + std::to_string(sf::Mouse::getPosition().x) + "x" + std::to_string(sf::Mouse::getPosition().y);
+}
+
+std::string printMousePosition(sf::RenderWindow *window) {
+    return "Mouse Position (Rel): " + std::to_string(sf::Mouse::getPosition(*window).x) + "x" + std::to_string(sf::Mouse::getPosition(*window).y);
+}
+
 int main() {
     sf::RenderWindow window(sf::VideoMode(200, 200), "SFML works!");
     window.setPosition(sf::Vector2i(2000, 200));
@@ -39,6 +47,8 @@ int main() {
             debug(printResolution());
             debug(printWindowSize(&window));
             debug(printWindowPosition(&window));
+            debug(printMousePosition());
+            debug(printMousePosition(&window));
         }
 
         window.clear();
