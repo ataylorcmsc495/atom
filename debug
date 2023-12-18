@@ -2,12 +2,12 @@
 
 t='Debug'
 d='debug'
-p='fika'
+p='atom'
 
 fd=build/${d}
 
 rm -rf ${fd}
-mkdir ${fd}
+mkdir -p ${fd}
 
 cmake -DCMAKE_BUILD_TYPE=${t} -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B ${fd}
 cmake --build ${fd} --target ${p} -j14
