@@ -16,6 +16,7 @@ add_executable(atom main.cpp
 #        ${CMAKE_SOURCE_DIR}/assets/background.png
 #        $<TARGET_FILE_DIR:fika>)
 
+configure_file(assets/vga.bmp ${CMAKE_CURRENT_BINARY_DIR}/vga.bmp COPYONLY)
 
 # set(SFML_STATIC_LIBRARIES TRUE)
 
