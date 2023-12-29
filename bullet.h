@@ -1,23 +1,33 @@
+#pragma once
 #include <SFML/Graphics.hpp>
 
 class Bullet {
   private:
     sf::RectangleShape _shape;
-    const float _speedFactor = 0.8f;
-    const float _speedDefault = 1.0f;
+    const float _speedDefault = 0.f;
     const float _sizeDefault = 5.0f;
     sf::Vector2f _velocity = sf::Vector2f(0.f, 0.f);
     sf::Vector2f _viewSize;
+    bool _armed;
 
   public:
-    Bullet(sf::Vector2f viewSize)
-        : _viewSize(viewSize) {
+    Bullet(sf::Vector2f viewSize, float maxSpeed)
+        : _viewSize(viewSize), _speedDefault(maxSpeed) {
         init();
     }
     void init() {
         _shape.setSize(sf::Vector2f(_sizeDefault, _sizeDefault));
         resetPosition();
         resetVelocity();
+    }
+    void disarm() {
+        _armed = false;
+    }
+    void arm() {
+        _armed = true;
+    }
+    bool isArmed() {
+        return _armed;
     }
 
     bool notInView(sf::Vector2f dim) {
@@ -37,11 +47,11 @@ class Bullet {
     }
     void resetVelocity() {
         _velocity.x = 0;
-        _velocity.y = _speedDefault * _speedFactor;
+        _velocity.y = _speedDefault;
     }
 
     void setMaxVelocityX() {
-        _velocity.x = _speedDefault * _speedFactor * 0.5;
+        _velocity.x = _speedDefault;
     }
 
     void scaleVelocityX(float multiplier) {
@@ -62,7 +72,7 @@ class Bullet {
     float getVelocityY() {
         return _velocity.y;
     }
-    void move() {
+    void move(float delta) {
         float targetHypSqd = _speedDefault * _speedDefault;
         float currentHypSqd = (_velocity.x * _velocity.x) + (_velocity.y * _velocity.y);
         float scaleFactor = 0;
@@ -72,7 +82,7 @@ class Bullet {
         _velocity.x *= scaleFactor;
         _velocity.y *= scaleFactor;
 
-        _shape.setPosition(_shape.getPosition().x + _velocity.x, _shape.getPosition().y + _velocity.y);
+        _shape.setPosition(_shape.getPosition().x + (_velocity.x * delta), _shape.getPosition().y + (_velocity.y * delta));
     }
     bool hitCeiling() {
         return (_shape.getPosition().y <= 0);
