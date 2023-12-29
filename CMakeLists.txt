@@ -17,6 +17,7 @@ add_executable(atom main.cpp
 #        $<TARGET_FILE_DIR:fika>)
 
 configure_file(assets/vga.bmp ${CMAKE_CURRENT_BINARY_DIR}/vga.bmp COPYONLY)
+configure_file(assets/SauceCodeProNerdFont-Regular.ttf ${CMAKE_CURRENT_BINARY_DIR}/SauceCodeProNerdFont-Regular.ttf COPYONLY)
 
 # set(SFML_STATIC_LIBRARIES TRUE)
 

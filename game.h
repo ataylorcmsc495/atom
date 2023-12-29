@@ -16,6 +16,10 @@ class Game {
     sf::Texture _bgTexture;
     sf::Sprite _background;
 
+    sf::Font _font;
+    sf::Text _score;
+    int _playerScore = 0;
+
     sf::RectangleShape player;
     float playerSpeed = 0.f;
     float playerMaxSpeed = 200.0f;
@@ -52,9 +56,21 @@ class Game {
         player.setSize(_playerSize);
         player.setPosition(sf::Vector2f(_dim.x / 2 - player.getSize().x / 2, _dim.y - 10.f));
         targets.reset(gameLevel);
+
+        _font.loadFromFile("SauceCodeProNerdFont-Regular.ttf");
+        _score.setFont(_font);
+        _score.setString("SCORE: 0");
+        _score.setCharacterSize(24);
+        _score.setFillColor(sf::Color::Magenta);
+        _score.setStyle(sf::Text::Regular);
+        _score.setPosition(sf::Vector2f(0.f,0.f));
+    
     }
     bool isRunning() {
         return _window.isOpen();
+    }
+    void updateScore() {
+        _score.setString("SCORE: " + std::to_string(_playerScore));
     }
     void update() {
         setDeltaTime();
@@ -136,6 +152,8 @@ class Game {
                     bullet2.scaleVelocityX(rebound.x);
                     bullet2.scaleVelocityY(rebound.y);
                     targets.damage(target.getPosition());
+                    _playerScore++;
+                    updateScore();
                     bullet2.disarm();
                 }
             }
@@ -159,6 +177,7 @@ class Game {
             }
         }
         _window.draw(bullet2.getDrawableShape());
+        _window.draw(_score);
         _window.display();
     }
 
