@@ -1,6 +1,10 @@
 #pragma once
 #include "TargetManager.h"
+#include "background.h"
 #include "bullet.h"
+#include "gameclock.h"
+#include "player.h"
+#include "scoreboard.h"
 #include "target.h"
 #include <SFML/Graphics.hpp>
 #include <chrono>
@@ -8,73 +12,39 @@
 
 class Game {
   private:
-    std::string bgFilename = "vga.bmp";
+    const bool bouncyFloor = true;
 
     sf::Vector2f _dim = sf::Vector2f(640.f, 480.f);
     sf::RenderWindow _window = sf::RenderWindow(sf::VideoMode(800, 600), "This is ATOM");
     sf::View _view = sf::View(sf::FloatRect(0.f, 0.f, _dim.x, _dim.y));
-    sf::Texture _bgTexture;
-    sf::Sprite _background;
 
-    sf::Font _font;
-    sf::Text _score;
-    int _playerScore = 0;
+    Background _background = Background("vga.bmp", (int)_dim.x, (int)_dim.y);
+    Scoreboard _scoreboard = Scoreboard(0, 0);
+    GameClock _clock;
 
-    sf::RectangleShape player;
-    float playerSpeed = 0.f;
-    float playerMaxSpeed = 200.0f;
-    float bulletMaxSpeed = 300.0f;
-    sf::Vector2f _playerSize = sf::Vector2f(50.f, 10.f);
+    Player _player = Player(_dim);
+    bool _controlLeft = false;
+    bool _controlRight = false;
+
+    const float _playerMaxSpeed = 200.0f;
+    const float _bulletMaxSpeed = 300.0f;
     float gameLevel = 1;
 
-    Bullet bullet2 = Bullet(_dim, bulletMaxSpeed);
-
-    TargetManager targets;
-
-    std::chrono::time_point<std::chrono::high_resolution_clock> lastTime = now();
-
-    std::chrono::time_point<std::chrono::high_resolution_clock> now() {
-        return std::chrono::high_resolution_clock::now();
-    }
-
-    float deltaTime = 0.0;
-    void setDeltaTime() {
-        deltaTime = std::chrono::duration_cast<std::chrono::duration<float>>(now() - lastTime).count();
-    }
-    void updateLastTime() {
-        lastTime = now();
-    }
+    Bullet _bullet = Bullet(_dim, _bulletMaxSpeed);
+    TargetManager _targets;
 
   public:
     Game(sf::Vector2i windowStartPos) {
         _window.setPosition(windowStartPos);
         _window.setView(_view);
-        _bgTexture.loadFromFile(bgFilename);
-        _background.setTexture(_bgTexture);
-        _background.setTextureRect(sf::IntRect(0, 0, (int)_dim.x, (int)_dim.y));
-        _background.setScale(1.0f, 1.0f);
-        player.setSize(_playerSize);
-        player.setPosition(sf::Vector2f(_dim.x / 2 - player.getSize().x / 2, _dim.y - 10.f));
-        targets.reset(gameLevel);
-
-        _font.loadFromFile("SauceCodeProNerdFont-Regular.ttf");
-        _score.setFont(_font);
-        _score.setString("SCORE: 0");
-        _score.setCharacterSize(24);
-        _score.setFillColor(sf::Color::Magenta);
-        _score.setStyle(sf::Text::Regular);
-        _score.setPosition(sf::Vector2f(0.f,0.f));
-    
+        _targets.reset(gameLevel);
     }
     bool isRunning() {
         return _window.isOpen();
     }
-    void updateScore() {
-        _score.setString("SCORE: " + std::to_string(_playerScore));
-    }
     void update() {
-        setDeltaTime();
-        updateLastTime();
+        float deltaTime = _clock.refreshDeltaTime();
+
         sf::Event event;
         while (_window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
@@ -94,90 +64,93 @@ class Game {
                 _window.close();
             }
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
-                bullet2.init();
-                targets.reset(1);
+                _bullet.init();
+                _targets.reset(1);
             }
             if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::A) {
-                    playerSpeed = -1 * playerMaxSpeed * deltaTime;
+                    _controlLeft = true;
+                    _controlRight = false;
                 }
                 if (event.key.code == sf::Keyboard::D) {
-                    playerSpeed = playerMaxSpeed * deltaTime;
+                    _controlRight = true;
+                    _controlLeft = false;
                 }
             }
             if (event.type == sf::Event::KeyReleased) {
-                if (event.key.code == sf::Keyboard::A && playerSpeed < 0) {
-                    playerSpeed = 0;
+                if (event.key.code == sf::Keyboard::A) {
+                    _controlLeft = false;
                 }
-                if (event.key.code == sf::Keyboard::D && playerSpeed > 0) {
-                    playerSpeed = 0;
+                if (event.key.code == sf::Keyboard::D) {
+                    _controlRight = false;
                 }
             }
         }
 
-        // Zero out the player speed if at edge of screen
-        if (player.getPosition().x < 0 && playerSpeed < 0) {
-            playerSpeed = 0;
-        } else if ((player.getPosition().x + player.getSize().x) > _dim.x && playerSpeed > 0) {
-            playerSpeed = 0;
-        }
-
-        if (Game::isCollision(player, bullet2.getBoundingBox())) {
-            bullet2.reboundY();
-            float mult = Game::normalizedHitPosition(bullet2.getCenterX(), player.getPosition().x, player.getPosition().x + player.getSize().x);
-            bullet2.setMaxVelocityX();
-            bullet2.scaleVelocityX((2 * mult) - 1);
+        if (Game::isCollision(_player.getBoundingBox(), _bullet.getBoundingBox())) {
+            _bullet.reboundY();
+            float mult = Game::normalizedHitPosition(_bullet.getCenterX(), _player.getPlatformLeftCoord(), _player.getPlatformRightCoord());
+            _bullet.setMaxVelocityX();
+            _bullet.scaleVelocityX((2 * mult) - 1);
         }
 
         // Bullet Hit Screen Edge?
-        if (bullet2.hitFloor()) {
-            // bullet2.init();
-            if (bullet2.getVelocityY() > 0)
-                bullet2.reboundY();
-        } else if (bullet2.hitCeiling() && bullet2.getVelocityY() < 0) {
-            bullet2.reboundY();
-        } else if (bullet2.hitLeftWall() && bullet2.getVelocityX() < 0) {
-            bullet2.reboundX();
-        } else if (bullet2.hitRightWall() && bullet2.getVelocityX() > 0) {
-            bullet2.reboundX();
+        if (_bullet.hitFloor()) {
+            if (bouncyFloor) {
+                if (_bullet.getVelocityY() > 0)
+                    _bullet.reboundY();
+            } else {
+                _bullet.init();
+            }
+        } else if (_bullet.hitCeiling() && _bullet.getVelocityY() < 0) {
+            _bullet.reboundY();
+        } else if (_bullet.hitLeftWall() && _bullet.getVelocityX() < 0) {
+            _bullet.reboundX();
+        } else if (_bullet.hitRightWall() && _bullet.getVelocityX() > 0) {
+            _bullet.reboundX();
         }
 
         // Bullet Hit A Target?
         bool anyCollisions = false;
-        for (Target target : targets.getTargets()) {
-            if (Game::isCollision(bullet2.getBoundingBox(), target.getBoundingBox())) {
+        for (Target target : _targets.getTargets()) {
+            if (Game::isCollision(_bullet.getBoundingBox(), target.getBoundingBox())) {
                 anyCollisions = true;
-                sf::Vector2f rebound = Game::calcReboundVector(bullet2.getBoundingBox(), target.getBoundingBox());
-                if (bullet2.isArmed()) {
-                    bullet2.scaleVelocityX(rebound.x);
-                    bullet2.scaleVelocityY(rebound.y);
-                    targets.damage(target.getPosition());
-                    _playerScore++;
-                    updateScore();
-                    bullet2.disarm();
+                sf::Vector2f rebound = Game::calcReboundVector(_bullet.getBoundingBox(), target.getBoundingBox());
+                if (_bullet.isArmed()) {
+                    _bullet.scaleVelocityX(rebound.x);
+                    _bullet.scaleVelocityY(rebound.y);
+                    _targets.damage(target.getPosition());
+
+                    _scoreboard.addToScore(1);
+                    _scoreboard.updateScoreboardText();
+
+                    _bullet.disarm();
                 }
             }
         }
         if (!anyCollisions) {
-            bullet2.arm();
+            _bullet.arm();
         }
 
-        player.setPosition(sf::Vector2f(player.getPosition().x + playerSpeed, player.getPosition().y));
-        bullet2.move(deltaTime);
+        if (_controlLeft) {
+            _player.moveLeft(deltaTime);
+        } else if (_controlRight) {
+            _player.moveRight(deltaTime);
+        }
+        _bullet.move(deltaTime);
     }
 
-    void
-    render() {
+    void render() {
         _window.clear();
-        // window.draw(background);
-        _window.draw(player);
-        for (Target target : targets.getTargets()) {
+        // _window.draw(_background.getDrawableShape());
+        _window.draw(_player.getDrawableShape());
+        for (Target target : _targets.getTargets()) {
             if (target.isAlive()) {
                 _window.draw(target.getDrawableShape());
             }
         }
-        _window.draw(bullet2.getDrawableShape());
-        _window.draw(_score);
+        _window.draw(_bullet.getDrawableShape());
+        _window.draw(_scoreboard.getDrawableShape());
         _window.display();
     }
 
