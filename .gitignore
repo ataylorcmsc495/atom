@@ -1,5 +1,7 @@
 /build*
-#/assets/
+/assets/
+/assets/*
+/assets*
 /idea*
 
 # Prerequisites
